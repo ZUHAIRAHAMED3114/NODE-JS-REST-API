@@ -1,0 +1,179 @@
+
+topic-1 :-> discuss  the  error occured during the undhandling of the promises
+topic-2 :-> discuss  the error occured in node.js server when coverting the id into ObjectId..
+topic-3 :-> discuss  the error occured in Mongodb database due to inserting the duplication key...
+topic-4 :-> discuss  the error occured due to validation of the MongooseSchema 
+                     not due to validatoin  of the ValidationError modules....
+
+topic-5 :-> related to the mongoose middlewares
+
+===========================================================
+topic-1
+============================================================
+
+reason <Error> | <any> The object with which the promise was rejected (typically an Error object).
+promise <Promise> The rejected promise.
+
+The 'unhandledRejection' event is emitted whenever a Promise is rejected and no error handler is attached to the promise within a turn of the event loop.
+When programming with Promises, exceptions are encapsulated as "rejected promises". Rejections can be caught and handled using promise.catch() and are
+propagated through a Promise chain. The 'unhandledRejection' event is useful for detecting and keeping track of promises that were rejected whose rejections
+have not yet been handled.
+
+below we are not handling the promise rejection  :--> 
+   
+    const connectDB = async() => {
+    var mongoDb = await mongoose.connect(process.env.MONGO_URI, {
+        useNewUrlParser: true,
+        useCreateIndex: true,
+        useFindAndModify: false,
+        useUnifiedTopology: true
+
+    })
+     console.log(`mongo db is connected ${mongoDb.connection.host}`)
+   }
+=============================================================
+topic-2 
+==============================================================
+
+important point to remember when doing the crud opration
+-> 
+ for getting the singleObject from the mongoDb:->
+ findbyId(req.params.id),findOne({_id:req.params.id}) 
+ if it will return the object i.e means success
+else {
+     there are two types of error 
+     a) wheather the casting error i.e occured when converting the id into the ObjectId
+     b) if file is not found in the mogoose instead of throuwing as an error it will not return any object....
+}
+
+throw then and catch pattern
+ MOdel.findbyID(1213)
+      .then(document=>{
+           if(document===null){
+               i.e means i.e particular id is not there  in the mongodb database
+           }
+
+      })
+      .catch(err=>{
+            this error is occured due to conversion of the id into objectId type 
+      })
+
+throgh asyn await
+
+
+try{
+var docuemtn=await Model.findById(123121);
+if(document===null){
+    i.e means there is no document is there for particular id 
+}
+}catch(err){
+     here error occured due to converting of the id into ObjectId
+}
+
+from the topic one we discussed i.e globally we can handle the error....
+
+=================================================================================
+topic-3
+=================================================================================
+MongoError:-> this will be find when command Operation i.e is inserting any data to the data base
+----------
+  normally this error will be observed when -> 
+  duplication of the uinque key is provided i.e means 
+  creating an instance with same id -->  
+     
+      Model.Create({})
+            .then(document=>{
+
+                // this doucemtn is return by the mogDo db after insrting in the database
+            })
+            .catch(err=>{
+
+                // here the error is pure Mongo Error    
+            })
+{"name":"MongoError","code":11000,"err":"insertDocument :: caused by :: 11000 E11000 duplicate key error index: mydb.users.$email_1 dup key: { : null }"}
+
+
+topic-4
+============================================================================================
+Validation Error :=>
+-----------------
+   // these error also can be hadled through 
+    3rd-party library i.e is 
+    express-validator,
+
+    
+
+    // pending from the mongoose middleware lecturer.. i.e 
+      mongoose middleware and sluggify .....
+      
+    pre-and post middleware of the mongoose ... this middleware are like a hooks (events) i.e are 
+    fired before making the crud operation to the Database....
+=================================================================================================
+
+mongoose document object contain number of methods 
+like 
+ Document.prototype={
+   save:()=>{},
+   update:()=>{},
+   updateOne:()=>{}
+   toJson:()=>{},
+   toObject:()=>{},
+   validate:()=>{},
+   replaceOne:()=>{}
+
+   //for checking 
+   
+   isDeleted:()=>{},
+   isValidate:()=>{}, 
+   isModified:()=>{},
+   isSelected:()=>{},
+
+
+   
+ }
+
+ etc.., methods are there
+
+There are different kinds of middleware in mongoose but the two we will be focusing 
+on to demonstrate the working of pre and post hooks is document middleware and query middleware. 
+The other two just for your knowledge are aggregate and model middleware.
+
+
+The document middleware works for a single document and mongoose methods like save, validate, updateOne, 
+ and remove. Inside a hook that you write for these methods the this object would refer to the document. 
+I think it is pretty evident from the name and the methods that document middleware is used when you want 
+to do some kind of an action on just a single document in mongoDB before or after the methods 
+
+
+The main crux of these hooks is that they ‘hook’ onto some other method and like a lifecycle method get executed 
+on the documents just before (pre) or just after (post) the method that they are hooked to is called.
+
+
+There may be many use cases for pre-hooks, maybe you have a field called archived in your schema and you want to 
+ignore all the archived documents in every find call. So, what would you do ? Will you include the filter for archived:
+false everywhere there is a find for that model ? What if you forget to do that some place ? This is a great use case
+of a pre-hook as a query middleware. Let us see how we can do this easily :
+
+
+pre-hook example in mongoose find
+This is a very very simple hook on the find method that just modifies the query and adds an additional filter.
+This additional filter will be added to each and every find query that is run on this model. Super useful, right?
+
+Another use case where I often see pre-hook used is removing dependent documents. For eg – a user is being deleted
+so in the pre-hook for remove on the user model we might want to archive or delete all the posts that the user made
+! Same way you can think of a lot of different use cases for the pre-hook just by knowing that it will be executed
+before the method it is hooked onto.
+
+
+Using the post-hook
+What do you think, when do the post-hooks get called ? I guess it’s not difficult to figure out that the post hooks are 
+called once all the pre-hooks have been executed, then the original method has been executed.
+
+pre-hooks -> method -> post-hooks
+
+This is the order of execution when it comes to mongoose. To be honest there is nothing new to tell in post hooks as
+ they work similarly to pre-hooks and the syntax and small nuances are described by the official docs much better than
+ I can.
+
+The only thing I can re-iterate on is the fact that pre, then the method and then the post hooks. Getting confused about 
+the order of execution can lead to unwanted surprises. And we do not like unwanted surprises as developers, do we ?
